@@ -163,6 +163,13 @@ routing::~routing()
 
     //clean up all added interfaces
     for (auto e : m_added_ifs) {
-        del_vif(e, m_interfaces->get_virtual_if_index(e));
+        int vif = m_interfaces->get_virtual_if_index(e);
+
+        m_mrt_sock->del_vif(vif);
+        if (m_table_number > 0) {
+            m_mrt_sock->unbind_vif_form_table(e, m_table_number);
+        }
     }
+
+    m_added_ifs.clear();
 }
