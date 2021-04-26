@@ -47,7 +47,7 @@ private:
     std::priority_queue<T, std::vector<T>, Compare> m_q;
     unsigned int m_size;
 
-    std::mutex m_global_lock;
+    mutable std::mutex m_global_lock;
     std::condition_variable cond_empty;
 
 public:
