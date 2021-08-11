@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <memory>
 
+#define IPV4_SSDP_ADDR    "239.255.255.250"    // Well-known multicast IPv4 site-local address for UPNP. Used to send/receive SSDP messages.
 //-------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------
 
@@ -305,6 +306,15 @@ void simple_mc_proxy_routing::event_new_source(const std::shared_ptr<proxy_msg>&
     case proxy_msg::NEW_SOURCE_MSG: {
         auto sm = std::static_pointer_cast<new_source_msg>(msg);
         source s(sm->get_saddr());
+
+        /*
+         * SSDP messages are not forwarded to the upstream,
+         * so ip_mr_cache is not required to be updated for this address.
+         */
+        if ((sm->get_gaddr().to_string()).compare(IPV4_SSDP_ADDR) == 0) {
+            del_route(sm->get_if_index(), sm->get_gaddr(), sm->get_saddr());
+            break;
+        }
         s.shared_source_timer = set_source_timer(sm->get_if_index(), sm->get_gaddr(), sm->get_saddr());
 
         //route calculation
