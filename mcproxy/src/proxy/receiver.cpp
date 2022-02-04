@@ -119,6 +119,7 @@ void receiver::worker_thread()
         }
 
         m_data_lock.lock();
+        if(m_running)
         analyse_packet(&msg, info_size);
         m_data_lock.unlock();
     }

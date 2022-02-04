@@ -96,6 +96,11 @@ int igmp_receiver::get_ctrl_min_size()
     return 0;
 }
 
+igmp_receiver::~igmp_receiver()
+{
+    m_running = false;
+}
+
 void igmp_receiver::analyse_packet(struct msghdr* msg, int)
 {
     HC_LOG_TRACE("");

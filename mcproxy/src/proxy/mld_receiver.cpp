@@ -64,6 +64,11 @@ int mld_receiver::get_ctrl_min_size()
     return sizeof(struct cmsghdr) + sizeof(struct in6_pktinfo);
 }
 
+mld_receiver::~mld_receiver()
+{
+    m_running = false;
+}
+
 void mld_receiver::analyse_packet(struct msghdr* msg, int)
 {
     HC_LOG_TRACE("");

@@ -57,7 +57,6 @@ class receiver
 {
 private:
 
-    bool m_running;
     bool m_in_debug_testing_mode;
     std::unique_ptr<std::thread> m_thread;
 
@@ -71,6 +70,7 @@ private:
     void join();
 
 protected:
+    bool m_running;
     const proxy_instance * const m_proxy_instance;
 
     int m_addr_family;
