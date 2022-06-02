@@ -2,6 +2,8 @@
 #include "include/utils/throttle.hpp"
 #include "include/utils/timestamp.hpp"
 
+#include <syslog.h>
+
 bool Throttle::get()
 {
     if (m_pps == 0 || m_hold_duration == 0)
@@ -29,6 +31,7 @@ bool Throttle::get()
         return false;
     } else {
         m_hold_expire = now + m_hold_duration;
+        syslog(LOG_DEBUG, "throttling hit");
         return true;
     }
 }

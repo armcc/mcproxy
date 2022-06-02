@@ -34,6 +34,9 @@
 #include <algorithm>
 #include <memory>
 
+#include <syslog.h>
+#include <net/if.h>
+
 #define IPV4_SSDP_ADDR    "239.255.255.250"    // Well-known multicast IPv4 site-local address for UPNP. Used to send/receive SSDP messages.
 //-------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------
@@ -558,6 +561,25 @@ void simple_mc_proxy_routing::set_routes(const addr_storage& gaddr, const std::l
                 continue;
             }
 
+            {   
+                char ifname[IF_NAMESIZE];
+                std::string logmsg;
+
+                logmsg.reserve(512);
+                logmsg += "add mroute gaddr: ";
+                logmsg += gaddr.to_string();
+                logmsg += ", saddr: ";
+                logmsg += e.first.saddr.to_string();
+                logmsg += ", srcif: ";
+                logmsg += std::string(if_indextoname(input_if_index, ifname) ? ifname : "(error)");
+                logmsg += ", dstifs: ";
+                for (auto vif : e.second) {
+                    logmsg += std::string(if_indextoname(vif, ifname) ? ifname : "(error)");
+                    logmsg += ",";
+                }
+                syslog(LOG_DEBUG, "%s", logmsg.c_str());
+            }
+
             m_p->m_routing->add_route(m_p->m_interfaces->get_virtual_if_index(input_if_index), gaddr, e.first.saddr, vif_out);
         }
 
@@ -573,6 +595,19 @@ void simple_mc_proxy_routing::send_record(unsigned int upstream_if_index, const 
 void simple_mc_proxy_routing::del_route(unsigned int if_index, const addr_storage& gaddr, const addr_storage& saddr) const
 {
     HC_LOG_TRACE("");
+
+    char ifname[IF_NAMESIZE];
+    std::string logmsg;
+
+    logmsg.reserve(512);
+    logmsg += "del mroute gaddr: ";
+    logmsg += gaddr.to_string();
+    logmsg += ", saddr: ";
+    logmsg += saddr.to_string();
+    logmsg += " if: ";
+    logmsg += std::string(if_indextoname(if_index, ifname) ? ifname : "(error)");
+    syslog(LOG_DEBUG, "%s", logmsg.c_str());
+
     m_p->m_routing->del_route(m_p->m_interfaces->get_virtual_if_index(if_index), gaddr, saddr);
 }
 

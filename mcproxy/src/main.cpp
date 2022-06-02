@@ -40,6 +40,7 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <syslog.h>
 
 void test_log();
 void test_test();
@@ -53,6 +54,8 @@ int main(int arg_count, char* args[])
         std::cout << e << std::endl;
     }
 #else
+    openlog("MCPROXY", 0, LOG_USER);
+
     try {
         proxy p(arg_count, args);
     } catch (const char* e) {

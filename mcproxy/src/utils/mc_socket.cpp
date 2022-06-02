@@ -36,6 +36,8 @@
 #include <net/if.h>
 #include <numeric>
 #include <unistd.h>
+#include <syslog.h>
+#include <net/if.h>
 
 #if !defined(__GLIBC__) || defined(__UCLIBC__)
 #include "sourcefilter.cpp"
@@ -675,6 +677,25 @@ bool mc_socket::set_source_filter(uint32_t if_index, const addr_storage& gaddr, 
     int i = 0;
     for (auto & e : src_list ) {
         slist[i++] = e.get_sockaddr_storage();
+    }
+
+    {
+        char ifname[IF_NAMESIZE];
+        std::string logmsg;
+
+        logmsg.reserve(512);
+        logmsg += "set source filter: group: ";
+        logmsg += gaddr.to_string();
+        logmsg += ", srclist: ";
+        for (auto& addr : src_list) {
+            logmsg += addr.to_string();
+            logmsg += ",";
+        }
+        logmsg += " iface: ";
+        logmsg += std::string(if_indextoname(if_index, ifname) ? ifname : "(error)");
+        logmsg += " mode: ";
+        logmsg += std::to_string(filter_mode);
+        syslog(LOG_DEBUG, "%s", logmsg.c_str());
     }
 
     rc = setsourcefilter(m_sock, if_index, &gaddr.get_sockaddr(), gaddr.get_addr_len(), filter_mode, src_list.size(), slist.get());

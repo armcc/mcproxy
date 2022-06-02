@@ -32,6 +32,7 @@
 #include "include/proxy/mld_sender.hpp"
 
 #include <unistd.h>
+#include <syslog.h>
 #include <iostream>
 #include <sstream>
 
@@ -232,6 +233,17 @@ void querier::receive_record_in_include_mode(mcast_addr_record_type record_type,
         send_Q(gaddr, ginfo, A, (A * B));
 
         if (m_fast_leave && !to_remove.empty()) {
+            std::string logmsg;
+
+            logmsg.reserve(512);
+            logmsg += "fastleave remove group: ";
+            logmsg += gaddr.to_string();
+            logmsg += ", src: ";
+            for (auto& s: to_remove) {
+                logmsg += s.saddr.to_string();
+                logmsg += ",";
+            }
+            syslog(LOG_DEBUG, "%s", logmsg.c_str());
             A -= to_remove;
             state_change_notification(gaddr);
         }
