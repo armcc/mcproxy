@@ -324,11 +324,12 @@ struct group_record_msg : public proxy_msg {
     //group_record_msg()
     //: group_record_msg(0, MODE_IS_INCLUDE, addr_storage(), source_list<source>(), IGMPv3) {}
 
-    group_record_msg(unsigned int if_index, mcast_addr_record_type record_type, const addr_storage& gaddr, source_list<source>&& slist, group_mem_protocol grp_mem_proto)
+    group_record_msg(unsigned int if_index, mcast_addr_record_type record_type, const addr_storage& gaddr, const addr_storage& saddr, source_list<source>&& slist, group_mem_protocol grp_mem_proto)
         : proxy_msg(GROUP_RECORD_MSG, LOSEABLE)
         , m_if_index(if_index)
         , m_record_type(record_type)
         , m_gaddr(gaddr)
+        , m_saddr(saddr)
         , m_slist(slist)
         , m_grp_mem_proto(grp_mem_proto){}
 
@@ -359,6 +360,10 @@ struct group_record_msg : public proxy_msg {
         return m_gaddr;
     }
 
+    const addr_storage& get_saddr() {
+        return m_saddr;
+    }
+
     source_list<source>& get_slist() {
         return m_slist;
     }
@@ -371,6 +376,7 @@ private:
     unsigned int m_if_index;
     mcast_addr_record_type m_record_type;
     addr_storage m_gaddr;
+    addr_storage m_saddr;
     source_list<source> m_slist;
     group_mem_protocol m_grp_mem_proto;
 };

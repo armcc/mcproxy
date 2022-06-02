@@ -485,6 +485,9 @@ instance_definition::instance_definition(const std::string& instance_name)
     : m_instance_name(instance_name)
     , m_table_number(0)
     , m_user_selected_table_number(false)
+    , m_fast_leave(true)
+    , m_throttle_threshold(32)
+    , m_throttle_hold_time(10)
 {
     HC_LOG_TRACE("");
 }
@@ -495,6 +498,9 @@ instance_definition::instance_definition(const std::string& instance_name, std::
     , m_user_selected_table_number(user_selected_table_number)
     , m_upstreams(std::move(upstreams))
     , m_downstreams(std::move(downstreams))
+    , m_fast_leave(true)
+    , m_throttle_threshold(32)
+    , m_throttle_hold_time(10)
 {
     HC_LOG_TRACE("");
 }
@@ -503,6 +509,24 @@ const std::string& instance_definition::get_instance_name() const
 {
     HC_LOG_TRACE("");
     return m_instance_name;
+}
+
+bool instance_definition::get_fast_leave() const
+{
+    HC_LOG_TRACE("");
+    return m_fast_leave;
+}
+
+unsigned long instance_definition::get_throttle_threshold() const
+{
+    HC_LOG_TRACE("");
+    return m_throttle_threshold;
+}
+
+unsigned long instance_definition::get_throttle_hold_time() const
+{
+    HC_LOG_TRACE("");
+    return m_throttle_hold_time;
 }
 
 const std::list<std::shared_ptr<interface>>& instance_definition::get_upstreams() const

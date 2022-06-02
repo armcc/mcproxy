@@ -180,6 +180,24 @@ addr_storage interfaces::get_saddr(const std::string& if_name) const
     }
 }
 
+addr_storage interfaces::get_link_local_saddr(const std::string& if_name) const
+{
+    HC_LOG_TRACE("");
+
+    if  (m_addr_family == AF_INET6) {
+        auto addr_list = m_if_prop.get_ip6_if(if_name);
+
+        for (auto it = addr_list->begin(); it != addr_list->end(); ++it) {
+            struct sockaddr_in6 *addr = (struct sockaddr_in6 *)(*it)->ifa_addr;
+
+            if (addr->sin6_scope_id != 0)
+                return addr_storage(*addr);
+        }
+    }
+
+    return addr_storage();
+}
+
 std::string interfaces::get_if_name(unsigned int if_index)
 {
     HC_LOG_TRACE("");

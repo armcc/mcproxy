@@ -35,10 +35,11 @@
 #include <iostream>
 #include <sstream>
 
-querier::querier(worker* msg_worker, group_mem_protocol querier_version_mode, int if_index, const std::shared_ptr<const sender>& sender, const std::shared_ptr<timing>& timing, const timers_values& tv, callback_querier_state_change cb_state_change)
+querier::querier(worker* msg_worker, group_mem_protocol querier_version_mode, bool fast_leave, int if_index, const std::shared_ptr<const sender>& sender, const std::shared_ptr<timing>& timing, const timers_values& tv, callback_querier_state_change cb_state_change)
     : m_msg_worker(msg_worker)
     , m_if_index(if_index)
     , m_db(querier_version_mode)
+    , m_fast_leave(fast_leave)
     , m_timers_values(tv)
     , m_cb_state_change(cb_state_change)
     , m_sender(sender)
@@ -154,7 +155,7 @@ void querier::receive_record(const std::shared_ptr<proxy_msg>& msg)
 
     switch (db_info_it->second.filter_mode) {
     case  INCLUDE_MODE:
-        receive_record_in_include_mode(gr->get_record_type(), gr->get_gaddr(), gr->get_slist(), db_info_it->second);
+        receive_record_in_include_mode(gr->get_record_type(), gr->get_gaddr(), gr->get_saddr(), gr->get_slist(), db_info_it->second);
 
         //if the new created group is not used delete it
         if (db_info_it->second.filter_mode == INCLUDE_MODE && db_info_it->second.include_requested_list.empty()) {
@@ -163,7 +164,7 @@ void querier::receive_record(const std::shared_ptr<proxy_msg>& msg)
 
         break;
     case EXCLUDE_MODE:
-        receive_record_in_exclude_mode(gr->get_record_type(), gr->get_gaddr(), gr->get_slist(), db_info_it->second);
+        receive_record_in_exclude_mode(gr->get_record_type(), gr->get_gaddr(), gr->get_saddr(), gr->get_slist(), db_info_it->second);
         break;
     default :
         HC_LOG_ERROR("wrong filter mode: " << db_info_it->second.filter_mode);
@@ -172,7 +173,16 @@ void querier::receive_record(const std::shared_ptr<proxy_msg>& msg)
 
 }
 
-void querier::receive_record_in_include_mode(mcast_addr_record_type record_type, const addr_storage& gaddr, source_list<source>& slist, gaddr_info& ginfo)
+/* LGI: update fast-leave db */
+static void add_client_to_slist(gaddr_info& ginfo, source_list<source>& slist, const addr_storage& saddr)
+{
+    for (auto s : slist) {
+        auto& srclist = ginfo.client_db[s.saddr];
+        srclist.emplace(saddr);
+    }
+}
+
+void querier::receive_record_in_include_mode(mcast_addr_record_type record_type, const addr_storage& gaddr, const addr_storage& saddr, source_list<source>& slist, gaddr_info& ginfo)
 {
     HC_LOG_TRACE("record type: " << record_type);
     //7.4.1.  Reception of Current State Records
@@ -191,6 +201,9 @@ void querier::receive_record_in_include_mode(mcast_addr_record_type record_type,
     case ALLOW_NEW_SOURCES: {//ALLOW(x)
         A += B;
 
+        if (m_fast_leave)
+            add_client_to_slist(ginfo, slist, saddr);
+
         mali(gaddr, A, std::move(B));
 
         state_change_notification(gaddr);
@@ -200,7 +213,28 @@ void querier::receive_record_in_include_mode(mcast_addr_record_type record_type,
 
     //INCLUDE (A)     BLOCK (B)      INCLUDE (A)          Send Q(MA,A*B)
     case BLOCK_OLD_SOURCES: {//BLOCK(x)
+        /* LGI: update fast-leave db and act upon the empty ones */
+        source_list<source> to_remove;
+
+        if (m_fast_leave) {
+            for (auto s : B) {
+                auto it = ginfo.client_db.find(s.saddr);
+                if (it != ginfo.client_db.end()) {
+                    it->second.erase(saddr);
+                    if (it->second.empty()) {
+                        ginfo.client_db.erase(it);
+                        to_remove.emplace(s.saddr);
+                    }
+                }
+            }
+        }
+
         send_Q(gaddr, ginfo, A, (A * B));
+
+        if (m_fast_leave && !to_remove.empty()) {
+            A -= to_remove;
+            state_change_notification(gaddr);
+        }
     }
     break;
 
@@ -227,6 +261,9 @@ void querier::receive_record_in_include_mode(mcast_addr_record_type record_type,
     //                                                    Send Q(MA,A-B)
     case CHANGE_TO_INCLUDE_MODE: {//TO_IN(x)
         A += B;
+
+        if (m_fast_leave)
+            add_client_to_slist(ginfo, slist, saddr);
 
         send_Q(gaddr, ginfo, A, (A - B));
         mali(gaddr, A, std::move(B));
@@ -255,6 +292,9 @@ void querier::receive_record_in_include_mode(mcast_addr_record_type record_type,
     case MODE_IS_INCLUDE: {//IS_IN(x)
         A += B;
 
+        if (m_fast_leave)
+            add_client_to_slist(ginfo, slist, saddr);
+
         mali(gaddr, A, move(B));
 
         state_change_notification(gaddr);
@@ -269,7 +309,7 @@ void querier::receive_record_in_include_mode(mcast_addr_record_type record_type,
 
 }
 
-void querier::receive_record_in_exclude_mode(mcast_addr_record_type record_type, const addr_storage& gaddr, source_list<source>& slist, gaddr_info& ginfo)
+void querier::receive_record_in_exclude_mode(mcast_addr_record_type record_type, const addr_storage& gaddr, const addr_storage& saddr, source_list<source>& slist, gaddr_info& ginfo)
 {
     HC_LOG_TRACE("record type: " << record_type);
     //7.4.1.  Reception of Current State Records

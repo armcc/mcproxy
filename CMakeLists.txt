@@ -13,6 +13,8 @@ add_executable(mcproxy-bin mcproxy/src/main.cpp
                #utils
            mcproxy/src/utils/mc_socket.cpp 
            mcproxy/src/utils/addr_storage.cpp 
+           mcproxy/src/utils/timestamp.cpp 
+           mcproxy/src/utils/throttle.cpp 
            mcproxy/src/utils/mroute_socket.cpp 
            mcproxy/src/utils/if_prop.cpp 
            mcproxy/src/utils/reverse_path_filter.cpp 

@@ -218,7 +218,7 @@ void proxy::start_proxy_instances()
 
         auto& interfaces = m_configuration->get_interfaces_for_pinstance(instance_name);
 
-        std::unique_ptr<proxy_instance> pr_i(new proxy_instance(m_configuration->get_group_mem_protocol(), instance_name, table_number, interfaces, m_timing));
+        std::unique_ptr<proxy_instance> pr_i(new proxy_instance(m_configuration, instance_name, table_number, interfaces, m_timing));
 
         //global rule bindung      
         auto& global_settings = pinstance->get_global_settings();

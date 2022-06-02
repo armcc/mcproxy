@@ -34,6 +34,7 @@
 #include "include/proxy/querier.hpp"
 #include "include/proxy/interfaces.hpp"
 #include "include/proxy/timing.hpp"
+#include "include/utils/throttle.hpp"
 #include "include/proxy/routing_management.hpp"
 #include "include/proxy/simple_mc_proxy_routing.hpp"
 
@@ -45,9 +46,8 @@
 #include <unistd.h>
 #include <net/if.h>
 
-proxy_instance::proxy_instance(group_mem_protocol group_mem_protocol, const std::string& instance_name, int table_number, const std::shared_ptr<const interfaces>& interfaces, const std::shared_ptr<timing>& shared_timing, bool in_debug_testing_mode)
-: m_group_mem_protocol(group_mem_protocol)
-, m_instance_name(instance_name)
+proxy_instance::proxy_instance(const std::unique_ptr<configuration>& config, const std::string& instance_name, int table_number, const std::shared_ptr<const interfaces>& interfaces, const std::shared_ptr<timing>& shared_timing, bool in_debug_testing_mode)
+: m_instance_name(instance_name)
 , m_table_number(table_number)
 , m_in_debug_testing_mode(in_debug_testing_mode)
 , m_interfaces(interfaces)
@@ -63,6 +63,17 @@ proxy_instance::proxy_instance(group_mem_protocol group_mem_protocol, const std:
 
     //rule_binding(const std::string& instance_name, rb_interface_type interface_type, const std::string& if_name, rb_interface_direction filter_direction, rb_rule_matching_type rule_matching_type, const std::chrono::milliseconds& timeout);
     HC_LOG_TRACE("");
+
+    m_group_mem_protocol = config->get_group_mem_protocol();
+
+    auto inst_set = config->get_inst_def_set();
+    auto pinstance = inst_set.find(instance_name);
+    if (pinstance == inst_set.end()) {
+        throw "cannot find instance"; 
+    }
+    m_fast_leave = (*pinstance)->get_fast_leave();
+    m_throttle_threshold = (*pinstance)->get_throttle_threshold();
+    m_throttle_hold_time = (*pinstance)->get_throttle_hold_time();
 
     if (!init_mrt_socket()) {
         throw "failed to initialize mroute socket";
@@ -85,6 +96,12 @@ proxy_instance::proxy_instance(group_mem_protocol group_mem_protocol, const std:
     }
 
     start();
+}
+
+Throttle proxy_instance::get_throttle()
+{
+    HC_LOG_TRACE("");
+    return Throttle(m_throttle_threshold, m_throttle_hold_time);
 }
 
 bool proxy_instance::init_mrt_socket()
@@ -284,7 +301,7 @@ void proxy_instance::handle_config(const std::shared_ptr<config_msg>& msg)
 
             //create a querier
             std::function<void(unsigned int, const addr_storage&)> cb_state_change = std::bind(&routing_management::event_querier_state_change, m_routing_management.get(), std::placeholders::_1, std::placeholders::_2);
-            std::unique_ptr<querier> q(new querier(this, m_group_mem_protocol, msg->get_if_index(), m_sender, m_timing, msg->get_timers_values(), cb_state_change));
+            std::unique_ptr<querier> q(new querier(this, m_group_mem_protocol, m_fast_leave, msg->get_if_index(), m_sender, m_timing, msg->get_timers_values(), cb_state_change));
             m_downstreams.insert(std::pair<unsigned int, downstream_infos>(msg->get_if_index(), downstream_infos(move(q), msg->get_interface())));
         } else {
             HC_LOG_WARN("downstream interface: " << interfaces::get_if_name(msg->get_if_index()) << " already exists");

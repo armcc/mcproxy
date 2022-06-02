@@ -43,7 +43,7 @@ class mld_receiver : public receiver
 private:
     int get_ctrl_min_size() override; //size in byte
     int get_iov_min_size() override; //size in byte
-    void analyse_packet(struct msghdr* msg, int info_size) override;
+    void analyse_packet(struct msghdr* msg, int info_size, const addr_storage& srcip) override;
 
 public:
     virtual ~mld_receiver();

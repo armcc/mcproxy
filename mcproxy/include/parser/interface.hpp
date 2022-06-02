@@ -211,6 +211,9 @@ class instance_definition
     bool m_user_selected_table_number; 
     std::list<std::shared_ptr<interface>> m_upstreams;
     std::list<std::shared_ptr<interface>> m_downstreams;
+    bool m_fast_leave;
+    unsigned long m_throttle_threshold;
+    unsigned long m_throttle_hold_time;
 
     std::list<std::shared_ptr<rule_binding>> m_global_settings;
 
@@ -218,6 +221,9 @@ public:
     instance_definition(const std::string& instance_name);
     instance_definition(const std::string& instance_name, std::list<std::shared_ptr<interface>>&& upstreams, std::list<std::shared_ptr<interface>>&& downstreams, int table_number, bool user_selected_table_number);
     const std::string& get_instance_name() const;
+    bool get_fast_leave() const;
+    unsigned long get_throttle_threshold() const;
+    unsigned long get_throttle_hold_time() const;
     const std::list<std::shared_ptr<interface>>& get_upstreams() const;
     const std::list<std::shared_ptr<interface>>& get_downstreams() const;
     const std::list<std::shared_ptr<rule_binding>>& get_global_settings() const;

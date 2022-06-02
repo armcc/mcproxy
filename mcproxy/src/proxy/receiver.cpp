@@ -23,6 +23,7 @@
 
 #include "include/hamcast_logging.h"
 #include "include/proxy/receiver.hpp"
+#include "include/proxy/proxy_instance.hpp"
 
 #include <unistd.h>
 
@@ -32,6 +33,7 @@ receiver::receiver(proxy_instance* pr_i, int addr_family, const std::shared_ptr<
     , m_thread(nullptr)
     , m_proxy_instance(pr_i)
     , m_addr_family(addr_family)
+    , m_throttle(pr_i->get_throttle())
     , m_mrt_sock(mrt_sock)
     , m_interfaces(interfaces)
 {
@@ -96,8 +98,18 @@ void receiver::worker_thread()
 
     //create msghdr
     struct msghdr msg;
-    msg.msg_name = nullptr;
-    msg.msg_namelen = 0;
+    union {
+        struct sockaddr_in ipv4;
+        struct sockaddr_in6 ipv6;
+    } src;
+
+    if (m_addr_family == AF_INET) {
+        msg.msg_name = &src.ipv4;
+        msg.msg_namelen = sizeof(src.ipv4);
+    } else {
+        msg.msg_name = &src.ipv6;
+        msg.msg_namelen = sizeof(src.ipv6);
+    }
 
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
@@ -120,7 +132,7 @@ void receiver::worker_thread()
 
         m_data_lock.lock();
         if(m_running)
-        analyse_packet(&msg, info_size);
+        analyse_packet(&msg, info_size, (m_addr_family == AF_INET) ? addr_storage(src.ipv4) : addr_storage(src.ipv6));
         m_data_lock.unlock();
     }
 }

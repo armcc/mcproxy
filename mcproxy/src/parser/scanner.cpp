@@ -154,6 +154,12 @@ token scanner::read_next_token()
             std::transform(cmp_str.begin(), cmp_str.end(), cmp_str.begin(), ::tolower);
             if (cmp_str.compare("protocol") == 0) {
                 return TT_PROTOCOL;
+            } else if (cmp_str.compare("fastleave") == 0) {
+                return TT_FAST_LEAVE;
+            } else if (cmp_str.compare("throttle") == 0) {
+                return TT_THROTTLE;
+            } else if (cmp_str.compare("holdtime") == 0) {
+                return TT_HOLD_TIME;
             } else if (cmp_str.compare("mldv1") == 0) {
                 return TT_MLDV1;
             } else if (cmp_str.compare("mldv2") == 0) {

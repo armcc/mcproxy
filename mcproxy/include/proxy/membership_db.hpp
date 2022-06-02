@@ -58,6 +58,7 @@ struct gaddr_info {
 
     source_list<source> include_requested_list;
     source_list<source> exclude_list;
+    std::map<addr_storage, std::set<addr_storage>> client_db; //to keep track of clients for the fast-leave funcionality
 
     bool is_in_backward_compatibility_mode() const;
     bool is_under_bakcward_compatibility_effects() const; 

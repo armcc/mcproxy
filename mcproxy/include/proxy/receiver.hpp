@@ -33,6 +33,7 @@
 
 #include "include/utils/mroute_socket.hpp"
 #include "include/utils/addr_storage.hpp"
+#include "include/utils/throttle.hpp"
 #include "include/proxy/interfaces.hpp"
 #include "include/proxy/message_format.hpp"
 #include "include/proxy/def.hpp"
@@ -75,6 +76,8 @@ protected:
 
     int m_addr_family;
 
+    Throttle m_throttle;
+
     const std::shared_ptr<const mroute_socket> m_mrt_sock;
 
     const std::shared_ptr<const interfaces> m_interfaces;
@@ -98,7 +101,7 @@ protected:
      * @param msg received message
      * @param info_size received information size
      */
-    virtual void analyse_packet(struct msghdr* msg, int info_size) = 0;
+    virtual void analyse_packet(struct msghdr* msg, int info_size, const addr_storage& srcip) = 0;
 
 public:
     /**

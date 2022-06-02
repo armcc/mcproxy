@@ -183,6 +183,15 @@ public:
     bool send_packet(const addr_storage& addr, const unsigned char* data, unsigned int data_size) const;
 
     /**
+     * @brief Send data to a specific ip address and to a specific port.
+     * @param addr destination address of packet and the destination port
+     * @param data data to send
+     * @param data_size size of the data
+     * @return Return true on success.
+     */
+    bool send_packet(const addr_storage& addr, const unsigned char* data, unsigned int data_size, const addr_storage& src, int if_index) const;
+
+    /**
      * @brief Receive a datagram
      * @param[out] buf read N bytes into buf from socket
      * @param[in] sizeOfBuf size of buf

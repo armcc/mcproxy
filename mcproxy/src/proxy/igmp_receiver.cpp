@@ -101,7 +101,7 @@ igmp_receiver::~igmp_receiver()
     m_running = false;
 }
 
-void igmp_receiver::analyse_packet(struct msghdr* msg, int)
+void igmp_receiver::analyse_packet(struct msghdr* msg, int, const addr_storage& srcip)
 {
     HC_LOG_TRACE("");
 
@@ -146,6 +146,7 @@ void igmp_receiver::analyse_packet(struct msghdr* msg, int)
         }
     } else if (ip_hdr->ip_p == IPPROTO_IGMP && ntohs(ip_hdr->ip_len) <= get_iov_min_size()) {
         if (igmp_hdr->igmp_type == IGMP_V2_MEMBERSHIP_REPORT || igmp_hdr->igmp_type == IGMP_V2_LEAVE_GROUP) {
+#if 0 /* LGI: Disable IGMPv2 */
             HC_LOG_DEBUG("IGMP_V2_MEMBERSHIP_REPORT or IGMP_V2_LEAVE_GROUP received");
 
             saddr = ip_hdr->ip_src;
@@ -174,6 +175,7 @@ void igmp_receiver::analyse_packet(struct msghdr* msg, int)
             } else {
                 HC_LOG_ERROR("unkown igmp type: " << igmp_hdr->igmp_type); 
             }
+#endif
         } else if (igmp_hdr->igmp_type == IGMP_V3_MEMBERSHIP_REPORT) {
             HC_LOG_DEBUG("IGMP_V3_MEMBERSHIP_REPORT received");
 
@@ -197,10 +199,21 @@ void igmp_receiver::analyse_packet(struct msghdr* msg, int)
                 return;
             }
 
+            bool throttled = false;
+            bool throttle_checked = false;
+
             for (int i = 0; i < num_records; ++i) {
                 mcast_addr_record_type rec_type = static_cast<mcast_addr_record_type>(rec->type);
                 unsigned int aux_size = rec->aux_data_len * 4; //RFC 3376 Section 4.2.6 Aux Data Len
                 int nos = ntohs(rec->num_of_srcs);
+
+                if (rec_type != BLOCK_OLD_SOURCES && !throttle_checked) {
+                    throttled = m_throttle.get();
+                    throttle_checked = true;
+                }
+
+                /* LGI: Enforce INCLUDE mode and ignore non-SSM. Also apply throttling except block messages */
+                if ((rec_type != MODE_IS_EXCLUDE) && (rec_type != CHANGE_TO_EXCLUDE_MODE) && (rec_type == BLOCK_OLD_SOURCES || !throttled)) {
 
                 gaddr = addr_storage(rec->gaddr);
                 source_list<source> slist;
@@ -215,8 +228,9 @@ void igmp_receiver::analyse_packet(struct msghdr* msg, int)
                 HC_LOG_DEBUG("\tgaddr: " << gaddr);
                 HC_LOG_DEBUG("\tnumber of sources: " << slist.size());
                 HC_LOG_DEBUG("\tsource_list: " << slist);
-                m_proxy_instance->add_msg(std::make_shared<group_record_msg>(if_index, rec_type, gaddr, move(slist), IGMPv3));
+                m_proxy_instance->add_msg(std::make_shared<group_record_msg>(if_index, rec_type, gaddr, srcip, move(slist), IGMPv3));
 
+                }
                 rec = reinterpret_cast<igmpv3_mc_record*>(reinterpret_cast<unsigned char*>(rec) + sizeof(igmpv3_mc_record) + nos * sizeof(in_addr) + aux_size);
             }
 

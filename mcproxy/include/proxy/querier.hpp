@@ -50,6 +50,7 @@ private:
     worker* const m_msg_worker;
     const unsigned int m_if_index;
     membership_db m_db;
+    const bool m_fast_leave;
     timers_values m_timers_values;
     callback_querier_state_change m_cb_state_change;
 
@@ -61,8 +62,8 @@ private:
     bool send_general_query();
 
     //
-    void receive_record_in_include_mode(mcast_addr_record_type record_type, const addr_storage& gaddr, source_list<source>& slist, gaddr_info& ginfo);
-    void receive_record_in_exclude_mode(mcast_addr_record_type record_type, const addr_storage& gaddr, source_list<source>& slist, gaddr_info& ginfo);
+    void receive_record_in_include_mode(mcast_addr_record_type record_type, const addr_storage& gaddr, const addr_storage& saddr, source_list<source>& slist, gaddr_info& ginfo);
+    void receive_record_in_exclude_mode(mcast_addr_record_type record_type, const addr_storage& gaddr, const addr_storage& saddr, source_list<source>& slist, gaddr_info& ginfo);
 
     //RFC3810 Section 7.2.3 Definition of Souce timers
     //Updates the filter_timer to the Multicast Address Listener Interval
@@ -105,7 +106,7 @@ public:
      * @param tv contain all nessesary timers and values.
      * @param cb_state_change Callback function to publish querier state change informations.
      */
-    querier(worker* msg_worker, group_mem_protocol querier_version_mode, int if_index, const std::shared_ptr<const sender>& sender, const std::shared_ptr<timing>& timing, const timers_values& tv, callback_querier_state_change cb_state_change);
+    querier(worker* msg_worker, group_mem_protocol querier_version_mode, bool fast_leave, int if_index, const std::shared_ptr<const sender>& sender, const std::shared_ptr<timing>& timing, const timers_values& tv, callback_querier_state_change cb_state_change);
 
     /**
      * @brief All received group records of the interface maintained by this querier musst be submitted to this function. 

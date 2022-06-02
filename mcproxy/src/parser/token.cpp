@@ -29,6 +29,9 @@ std::string get_token_type_name(token_type tt)
 {
     std::map<token_type, std::string> name_map = {
         {TT_PROTOCOL, "TT_PROTOCOL"},
+        {TT_FAST_LEAVE, "TT_FAST_LEAVE"},
+        {TT_THROTTLE, "TT_THROTTLE"},
+        {TT_HOLD_TIME, "TT_HOLD_TIME"},
         {TT_MLDV1, "TT_MLDV1"},
         {TT_MLDV2, "TT_MLDV2"},
         {TT_IGMPV1, "TT_IGMPV1"},

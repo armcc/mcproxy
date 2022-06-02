@@ -28,6 +28,9 @@
 
 enum token_type {
     TT_PROTOCOL,
+    TT_FAST_LEAVE,
+    TT_THROTTLE,
+    TT_HOLD_TIME,
     TT_MLDV1,
     TT_MLDV2,
     TT_IGMPV1,

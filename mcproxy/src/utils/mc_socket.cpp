@@ -304,6 +304,11 @@ bool mc_socket::send_packet(const addr_storage& addr, std::string data) const
 
 bool mc_socket::send_packet(const addr_storage& addr, const unsigned char* data, unsigned int data_size) const
 {
+	return send_packet(addr, data, data_size, addr_storage(), 0);
+}
+
+bool mc_socket::send_packet(const addr_storage& addr, const unsigned char* data, unsigned int data_size, const addr_storage& src, int if_index) const
+{
     HC_LOG_TRACE("addr: " << addr << " port: " << addr.get_port() << " data_size: " << data_size);
 
     if (!is_udp_valid()) {
@@ -311,9 +316,38 @@ bool mc_socket::send_packet(const addr_storage& addr, const unsigned char* data,
         return false;
     }
 
+    struct msghdr msg;
+    struct iovec iov;
+    char msg_control[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+
+    iov.iov_base = const_cast<uint8_t*>(data);
+    iov.iov_len = data_size;
+    memset(&msg, 0, sizeof(msg));
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_name = const_cast<struct sockaddr*>(&addr.get_sockaddr());
+    msg.msg_namelen = addr.get_addr_len();
+
+    if (m_addrFamily == AF_INET6 && src.is_valid()) {
+        struct cmsghdr *cmsg;
+        struct in6_pktinfo *pktinfo;
+
+        msg.msg_control = msg_control;
+        msg.msg_controllen = sizeof(msg_control);
+        cmsg = CMSG_FIRSTHDR(&msg);
+        cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+        cmsg->cmsg_level = IPPROTO_IPV6;
+        cmsg->cmsg_type = IPV6_PKTINFO;
+        pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+
+        memset(pktinfo, 0, sizeof(*pktinfo));
+        pktinfo->ipi6_addr = src.get_in6_addr();
+        pktinfo->ipi6_ifindex = if_index;
+    }
+
     int rc = 0;
 
-    rc = sendto(m_sock, data, data_size, 0, &addr.get_sockaddr() , addr.get_addr_len());
+    rc = sendmsg(m_sock, &msg, 0);
 
     if (rc == -1) {
         HC_LOG_ERROR("failed to send! Error: " << strerror(errno)  << " errno: " << errno);

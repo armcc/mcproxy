@@ -34,6 +34,8 @@
 #include "include/proxy/def.hpp"
 #include "include/proxy/querier.hpp"
 #include "include/parser/interface.hpp"
+#include "include/parser/configuration.hpp"
+#include "include/utils/throttle.hpp"
 
 #include <memory>
 #include <set>
@@ -81,7 +83,7 @@ private:
     };
 
     //IGMPv1, IGMPv2, IGMPv3, MLDv1, MLDv2
-    const group_mem_protocol m_group_mem_protocol;
+    group_mem_protocol m_group_mem_protocol;
 
     //defines the mulitcast routing talbe, if set to 0 (default routing table) no other instances running on the system to simplifie the kernel calls.
     const std::string m_instance_name;
@@ -110,6 +112,10 @@ private:
     std::shared_ptr<rule_binding> m_upstream_input_rule;
     std::shared_ptr<rule_binding> m_upstream_output_rule;
 
+    bool m_fast_leave;
+    unsigned long m_throttle_threshold;
+    unsigned long m_throttle_hold_time;
+
     //init
     bool init_mrt_socket();
     bool init_sender();
@@ -137,12 +143,14 @@ public:
      * @param shared_timing Stores and triggers all time-dependent events for this proxy instance.
      * @param in_debug_testing_mode If true this proxy instance stops receiving group membership messages and prints a lot of status messages to the command line.
      */
-    proxy_instance(group_mem_protocol group_mem_protocol, const std::string& intance_name, int table_number, const std::shared_ptr<const interfaces>& interfaces, const std::shared_ptr<timing>& shared_timing, bool in_debug_testing_mode = false);
+    proxy_instance(const std::unique_ptr<configuration>& config, const std::string& intance_name, int table_number, const std::shared_ptr<const interfaces>& interfaces, const std::shared_ptr<timing>& shared_timing, bool in_debug_testing_mode = false);
 
     /**
      * @brief Release all resources.
      */
     virtual ~proxy_instance();
+
+    Throttle get_throttle();
 
     static void test_querier(std::string if_name);
 

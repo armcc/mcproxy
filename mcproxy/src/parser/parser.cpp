@@ -46,8 +46,12 @@ parser_type parser::get_parser_type()
             return PT_INSTANCE_DEFINITION;
         } else if (cmp_token.get_type() == TT_UPSTREAM || cmp_token.get_type() == TT_DOWNSTREAM) {
             return PT_INTERFACE_RULE_BINDING;
+        } else if (cmp_token.get_type() == TT_FAST_LEAVE) {
+            return PT_FAST_LEAVE;
+        } else if (cmp_token.get_type() == TT_THROTTLE) {
+            return PT_THROTTLE;
         } else {
-            HC_LOG_ERROR("failed to parse line " << m_current_line << " unknown token " << get_token_type_name(cmp_token.get_type()) << " with value " << cmp_token.get_string() << ", expected \":\" or \"upstream\" or \"downstream\"");
+            HC_LOG_ERROR("failed to parse line " << m_current_line << " unknown token " << get_token_type_name(cmp_token.get_type()) << " with value " << cmp_token.get_string() << ", expected \":\" or \"upstream\" or \"downstream\" or \"fastleave\"");
             throw "failed to parse config file";
         }
     } else if(m_current_token.get_type() == TT_DISABLE) {
@@ -371,6 +375,93 @@ addr_storage parser::get_addr(group_mem_protocol gmp)
     } else {
         HC_LOG_ERROR("failed to parse line " << m_current_line << " ip address: " << s.str() << " is invalid");
         throw "failed to parse config file";
+    }
+}
+
+void parser::parse_fast_leave(const inst_def_set& ids)
+{
+    HC_LOG_TRACE("");
+
+    if (get_parser_type() != PT_FAST_LEAVE) {
+        HC_LOG_ERROR("failed to parse line " << m_current_line << " unknown token " << get_token_type_name(m_current_token.get_type()) << " with value " << m_current_token.get_string() << ", expected \"fastleave\"");
+        throw "failed to parse config file";
+    }
+
+    get_next_token();
+    if (m_current_token.get_type() == TT_STRING) {
+        std::string instance_name = m_current_token.get_string();
+        auto it = ids.find(instance_name);
+        if (it == ids.end()) {
+            HC_LOG_ERROR("failed to parse line " << m_current_line << " proxy instance " << m_current_token.get_string() << " not defined");
+            throw "failed to parse config file";
+        }
+        get_next_token();
+        if (m_current_token.get_type() == TT_FAST_LEAVE) {
+            get_next_token();
+            if (m_current_token.get_type() == TT_DISABLE) {
+                (*it)->m_fast_leave = false;
+                return;
+            }
+        }
+    }
+
+    HC_LOG_ERROR("failed to parse line " << m_current_line << " proxy instance " << m_current_token.get_string() << " not defined");
+    throw "failed to parse config file";
+}
+
+void parser::parse_throttle(const inst_def_set& ids)
+{
+    HC_LOG_TRACE("");
+
+    auto error_notification = [&]() {
+        HC_LOG_ERROR("failed to parse line " << m_current_line << " unknown token " << get_token_type_name(m_current_token.get_type()) << " with value " << m_current_token.get_string() << " in this context");
+        throw "failed to parse config file";
+    };
+
+    if (get_parser_type() != PT_THROTTLE) {
+        error_notification();
+    }
+
+    get_next_token();
+    if (m_current_token.get_type() != TT_STRING) {
+        error_notification();
+    }
+
+    std::string instance_name = m_current_token.get_string();
+    auto it = ids.find(instance_name);
+    if (it == ids.end()) {
+        HC_LOG_ERROR("failed to parse line " << m_current_line << " proxy instance " << m_current_token.get_string() << " not defined");
+        throw "failed to parse config file";
+    }
+
+    get_next_token();
+    if (m_current_token.get_type() != TT_THROTTLE) {
+        error_notification();
+    }
+
+    get_next_token();
+    if (m_current_token.get_type() != TT_STRING) {
+        error_notification();
+    }
+    int t = std::stoi(m_current_token.get_string());
+    if (t < 0) {
+        error_notification();
+    }
+    (*it)->m_throttle_threshold = t;
+
+    get_next_token();
+    if (m_current_token.get_type() == TT_HOLD_TIME) {
+        get_next_token();
+        if (m_current_token.get_type() != TT_STRING) {
+            error_notification();
+        }
+        int hold_time = std::stoi(m_current_token.get_string());
+        if (hold_time < 0) {
+            error_notification();
+        }
+        (*it)->m_throttle_hold_time = hold_time;
+    } else if (m_current_token.get_type() != TT_NIL) {
+        error_notification();
     }
 }
 

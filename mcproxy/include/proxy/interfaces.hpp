@@ -72,6 +72,7 @@ public:
 
     int get_virtual_if_index(unsigned int if_index) const;
     addr_storage get_saddr(const std::string& if_name) const;
+    addr_storage get_link_local_saddr(const std::string& if_name) const;
 
     static std::string get_if_name(unsigned int if_index);
 

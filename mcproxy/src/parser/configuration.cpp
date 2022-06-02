@@ -163,6 +163,14 @@ void configuration::run_parser()
             p.parse_interface_rule_binding(m_global_table_set, m_gmp, m_inst_def_set);
             break;
         }
+        case PT_FAST_LEAVE: {
+            p.parse_fast_leave(m_inst_def_set);
+            break;
+        }
+        case PT_THROTTLE: {
+            p.parse_throttle(m_inst_def_set);
+            break;
+        }
         default:
             HC_LOG_ERROR("unkown parser type");
             throw "unkown parser type";

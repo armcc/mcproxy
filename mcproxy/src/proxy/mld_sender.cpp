@@ -176,7 +176,7 @@ bool mld_sender::send_mldv2_query(unsigned int if_index, const timers_values& tv
         return false;
     }
 
-    return m_sock.send_packet(dst_addr, reinterpret_cast<unsigned char*>(q.get()), size);
+    return m_sock.send_packet(dst_addr, reinterpret_cast<unsigned char*>(q.get()), size, m_interfaces->get_link_local_saddr(interfaces::get_if_name(if_index)), if_index);
 }
 
 bool mld_sender::add_hbh_opt_header() const
@@ -187,7 +187,7 @@ bool mld_sender::add_hbh_opt_header() const
 
     struct ip6_hbh* hbh_Hdr = (struct ip6_hbh*)extbuf;
     struct ip6_opt_router* opt_Hdr = (struct ip6_opt_router*)(extbuf + sizeof(struct ip6_hbh));
-    pad2* pad_Hdr = (pad2*)(extbuf + sizeof(struct ip6_hbh) + sizeof(struct ip6_opt_router));
+    unsigned char *pad_Hdr = extbuf + sizeof(struct ip6_hbh) + sizeof(struct ip6_opt_router);
 
     hbh_Hdr->ip6h_nxt = IPPROTO_ICMPV6;
     hbh_Hdr->ip6h_len =  MC_MASSAGES_IPV6_ROUTER_ALERT_OPT_SIZE; //=> 8 Bytes
@@ -196,7 +196,8 @@ bool mld_sender::add_hbh_opt_header() const
     opt_Hdr->ip6or_len = sizeof(opt_Hdr->ip6or_value);
     *(u_int16_t*)&opt_Hdr->ip6or_value[0] = IP6_ALERT_MLD;
 
-    *pad_Hdr = IP6OPT_PADN;
+    pad_Hdr[0] = IP6OPT_PADN;
+    pad_Hdr[1] = 0;
 
     if (!m_sock.add_ipv6_extension_header((unsigned char*)hbh_Hdr, sizeof(struct ip6_hbh) + sizeof(struct ip6_opt_router) + sizeof(pad2))) {
         return false;

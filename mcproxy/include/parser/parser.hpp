@@ -34,7 +34,7 @@
 #include <memory>
 
 enum parser_type {
-    PT_PROTOCOL, PT_INSTANCE_DEFINITION, PT_TABLE, PT_INTERFACE_RULE_BINDING
+    PT_PROTOCOL, PT_FAST_LEAVE, PT_THROTTLE, PT_INSTANCE_DEFINITION, PT_TABLE, PT_INTERFACE_RULE_BINDING
 };
 
 class parser
@@ -64,6 +64,8 @@ public:
     void parse_instance_definition(inst_def_set& ids);
     std::unique_ptr<table> parse_table(const std::shared_ptr<const global_table_set>& gts, group_mem_protocol gmp);
     void parse_interface_rule_binding(const std::shared_ptr<const global_table_set>& gts, group_mem_protocol gmp, const inst_def_set& ids);
+    void parse_fast_leave(const inst_def_set& ids);
+    void parse_throttle(const inst_def_set& ids);
 
     std::string to_string() const;
     friend std::ostream& operator<<(std::ostream& stream, const parser& scan);
